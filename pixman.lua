@@ -1,0 +1,63 @@
+local function insertIntoTable(t, n, i)
+  local ogn = #t
+  for j=ogn, n, -1 do
+    t[j+1] = t[j]
+  end
+  t[n] = i
+end
+
+local function removeFromTable(t, n)
+  local ogn = #t
+  t[n] = nil
+  for i=n+1, ogn, 1 do
+    t[i-1] = t[i]
+  end
+  if n < ogn then t[#t] = nil end
+end
+
+local lib = {}
+
+function lib.yscroll(n, r)
+  r = r or {}
+  r.x = r.x or 0
+  r.y = r.y or 0
+  local w, h = term.getSize(2)
+  r.w = r.w or w
+  r.h = r.h or h
+  local pixels = term.getPixels(r.x, r.y, r.w, r.h, true)
+  if n > 0 then
+    for i=1, n, 1 do
+      removeFromTable(pixels, 1)
+      pixels[#pixels+1] = string.char(r.color or 15):rep(r.w)
+    end
+  elseif n < 0 then
+    for i=1, math.abs(n), 1 do
+      insertIntoTable(pixels, 1, string.char(r.color or 15):rep(r.w))
+      pixels[#pixels] = nil
+    end
+  end
+  term.drawPixels(r.x, r.y, pixels)
+end
+
+function lib.xscroll(n, r)
+  r = r or {}
+  r.x = r.x or 0
+  r.y = r.y or 0
+  local w, h = term.getSize(2)
+  r.w = r.w or w
+  r.h = r.h or h
+  local pixels = term.getPixels(r.x, r.y, r.w, r.h, true)
+  local _end = string.char(r.color or 15):rep(math.abs(n))
+  if n > 0 then
+    for i=1, #pixels, 1 do
+      pixels[i] = pixels[i]:sub(n+1) .. _end
+    end
+  elseif n < 0 then
+    for i=1, #pixels, 1 do
+      pixels[i] = _end .. pixels[i]:sub(1, n - 1)
+    end
+  end
+  term.drawPixels(r.x, r.y, pixels)
+end
+
+return lib

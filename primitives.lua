@@ -1,5 +1,9 @@
 -- graphical primitives --
 
+local RC_RADIUS = 4
+
+local pixman = require("pixman")
+
 local lib = {}
 
 function lib.rect(r)
@@ -76,7 +80,7 @@ local font = {}
 
 -- font.txt is expected to contain a monospace 8x16 font
 -- see the example one for the exact format
-local handle = io.open("font.txt", "r")
+local handle = io.open("gfx/font.txt", "r")
 local n, c = 0, ""
 for line in handle:lines("l") do
   if n == 0 or n == 17 then
@@ -113,79 +117,40 @@ function lib.glyph(x, y, char, color)
   end
 end
 
-local function insertIntoTable(t, n, i)
-  local ogn = #t
-  for j=ogn, n, -1 do
-    t[j+1] = t[j]
-  end
-  t[n] = i
-end
-
-local function removeFromTable(t, n)
-  local ogn = #t
-  t[n] = nil
-  for i=n+1, ogn, 1 do
-    t[i-1] = t[i]
-  end
-  if n < ogn then t[#t] = nil end
-end
-
-function lib.scroll(n, r)
-  r = r or {}
-  r.x = r.x or 0
-  r.y = r.y or 0
+function lib.text(t, r)
   local w, h = term.getSize(2)
-  r.w = r.w or w
-  r.h = r.h or h
-  local pixels = term.getPixels(r.x, r.y, r.w, r.h, true)
-  if n > 0 then
-    for i=1, n, 1 do
-      removeFromTable(pixels, 1)
-      pixels[#pixels+1] = string.char(r.color or 15):rep(r.w)
-    end
-  elseif n < 0 then
-    for i=1, math.abs(n), 1 do
-      insertIntoTable(pixels, 1, string.char(r.color or 15):rep(r.w))
-      pixels[#pixels] = nil
-    end
-  end
-  term.drawPixels(r.x, r.y, pixels)
-end
-
-function lib.scrollX(n, r)
-  r = r or {}
-  r.x = r.x or 0
-  r.y = r.y or 0
-  local w, h = term.getSize(2)
-  r.w = r.w or w
-  r.h = r.h or h
-  local pixels = term.getPixels(r.x, r.y, r.w, r.h, true)
-  local _end = string.char(r.color or 15):rep(math.abs(n))
-  if n > 0 then
-    for i=1, #pixels, 1 do
-      pixels[i] = pixels[i]:sub(n+1) .. _end
-    end
-  elseif n < 0 then
-    for i=1, #pixels, 1 do
-      pixels[i] = _end .. pixels[i]:sub(1, n - 1)
-    end
-  end
-  term.drawPixels(r.x, r.y, pixels)
-end
-
-function lib.text(x, y, str, wrapTo)
-  local w, h = term.getSize(2)
-  for c in str:gmatch(".") do
-    lib.glyph(x, y, c, 0)
+  local x, y = t.x, t.y
+  for c in t.text:gmatch(".") do
+    lib.glyph(x, y, c, t.color or 0)
     x = x + 8
     if x + 8 > w then
-      x = wrapTo or 0
+      x = t.wrapTo or 0
       y = y + 16
       if y + 16 > h then
-        lib.scroll(16)
+        pixman.yscroll(16, r)
         y = y - 16
       end
     end
+  end
+end
+
+function lib.rounded_rect(r)
+  local radius = r.radius or RC_RADIUS
+  local r1 = {x = r.x + radius, y = r.y, w = r.w - radius * 2, h = r.h,
+    color = r.color}
+  local r2 = {x = r.x, y = r.y + radius, w = r.w, h = r.h - radius * 2,
+    color = r.color}
+  lib.rect(r1)
+  lib.rect(r2)
+  local points = {
+    {r.x, r.y},
+    {r.x, r.y + r.h - (radius * 2) - 1},
+    {r.x + r.w - (radius * 2) - 1, r.y},
+    {r.x + r.w - (radius * 2) - 1, r.y + r.h - (radius * 2) - 1},
+  }
+  for i=1, #points, 1 do
+    lib.circle({x = points[i][1], y = points[i][2], r = radius,
+      color = r.color, fill = true})
   end
 end
 

@@ -1,4 +1,5 @@
 local primitives = require("primitives")
+local pixman = require("pixman")
 
 term.setGraphicsMode(2)
 term.clear()
@@ -20,35 +21,23 @@ primitives.circle({
   fill = true
 })
 
-primitives.text(1, 1, "this is some text")
+primitives.text({x=1, y=1, text="this is some text"})
 
 local wst = ""
 for i=32, 126, 1 do wst = wst .. string.char(i) end
-primitives.text(1, 14, wst)
+primitives.text({x=1, y=14, text=wst})
 
-for i=1, 16, 1 do
-  primitives.scroll(1, {x=1, y=1, w=50, h=50})
-  os.sleep(0.05)
-end
+primitives.rounded_rect({
+  x = 100, y = 100,
+  w = 30, h = 20,
+  color = 5, radius = 4
+})
 
-for i=1, 16, 1 do
-  primitives.scroll(-1, {x=1, y=1, w=50, h=50})
-  os.sleep(0.05)
-end
-
-for i=1, 16, 1 do
-  primitives.scrollX(1)
-  os.sleep(0.05)
-end
-
-for i=1, 16, 1 do
-  primitives.scrollX(-1)
-  os.sleep(0.05)
-end
-
-sleep(1)
-primitives.text(1, 150, wst, 1)
+primitives.rounded_rect({
+  x = 140, y = 110,
+  w = 50, h = 40,
+  color = 6, radius = 5
+})
 
 os.pullEvent("char")
 term.setGraphicsMode(false)
-

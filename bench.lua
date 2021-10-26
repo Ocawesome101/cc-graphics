@@ -17,6 +17,15 @@ for i=1, count, 1 do
 end
 local finish = os.epoch("utc")
 
-term.setGraphicsMode(false)
-
 print(count.." circles took " .. (finish - start) .. "ms")
+
+start = os.epoch("utc")
+local w, h = term.getSize(2)
+for i=1, count, 1 do
+  p.text({x=math.random(1, w), y=math.random(1, h), text="some text", wrapTo=64,
+    color=math.random(0,15)})
+end
+finish = os.epoch("utc")
+print(count.." 'some text's took " .. (finish - start) .. "ms")
+
+term.setGraphicsMode(false)
