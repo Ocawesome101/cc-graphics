@@ -6,60 +6,68 @@ local pixman = require("pixman")
 
 local lib = {}
 
-function lib.rect(r)
-  term.drawPixels(r.x, r.y, r.color, r.w, r.h)
+local ts = setmetatable({}, {__index = function(t, k)
+  return function(_, ...)
+    if not term[k] then error("bad term call " .. k) end
+    return term[k](...)
+  end
+end})
+
+function lib.rect(r, s)
+  s = s or ts
+  s:drawPixels(r.x, r.y, r.color, r.w, r.h)
 end
 
 -- copied from groups.csail.mit.edu
-local function circlePoints(cx, cy, x, y, px, fill)
+local function circlePoints(cx, cy, x, y, px, fill, s)
   local ln, lnx
   if fill then
     ln = {string.rep(string.char(px), y*2+1)}
     lnx = {string.rep(string.char(px), x*2+1)}
   end
   if x == 0 then
-    term.setPixel(cx, cy + y, px)
-    term.setPixel(cx, cy - y, px)
+    s:setPixel(cx, cy + y, px)
+    s:setPixel(cx, cy - y, px)
     if fill then
-      term.drawPixels(cx - y, cy, ln)
+      s:drawPixels(cx - y, cy, ln)
     else
-      term.setPixel(cx + y, cy, px)
-      term.setPixel(cx - y, cy, px)
+      s:setPixel(cx + y, cy, px)
+      s:setPixel(cx - y, cy, px)
     end
   elseif x == y then
     if fill then
-      term.drawPixels(cx - x, cy + y, ln)
-      term.drawPixels(cx - x, cy - y, ln)
+      s:drawPixels(cx - x, cy + y, ln)
+      s:drawPixels(cx - x, cy - y, ln)
     else
-      term.setPixel(cx + x, cy + y, px)
-      term.setPixel(cx - x, cy + y, px)
-      term.setPixel(cx + x, cy - y, px)
-      term.setPixel(cx - x, cy - y, px)
+      s:setPixel(cx + x, cy + y, px)
+      s:setPixel(cx - x, cy + y, px)
+      s:setPixel(cx + x, cy - y, px)
+      s:setPixel(cx - x, cy - y, px)
     end
   elseif x < y then
     if fill then
-      term.drawPixels(cx - x, cy + y, lnx)
-      term.drawPixels(cx - x, cy - y, lnx)
-      term.drawPixels(cx - y, cy + x, ln)
-      term.drawPixels(cx - y, cy - x, ln)
+      s:drawPixels(cx - x, cy + y, lnx)
+      s:drawPixels(cx - x, cy - y, lnx)
+      s:drawPixels(cx - y, cy + x, ln)
+      s:drawPixels(cx - y, cy - x, ln)
     else
-      term.setPixel(cx + x, cy + y, px)
-      term.setPixel(cx - x, cy + y, px)
-      term.setPixel(cx + x, cy - y, px)
-      term.setPixel(cx - x, cy - y, px)
-      term.setPixel(cx + y, cy + x, px)
-      term.setPixel(cx - y, cy + x, px)
-      term.setPixel(cx + y, cy - x, px)
-      term.setPixel(cx - y, cy - x, px)
+      s:setPixel(cx + x, cy + y, px)
+      s:setPixel(cx - x, cy + y, px)
+      s:setPixel(cx + x, cy - y, px)
+      s:setPixel(cx - x, cy - y, px)
+      s:setPixel(cx + y, cy + x, px)
+      s:setPixel(cx - y, cy + x, px)
+      s:setPixel(cx + y, cy - x, px)
+      s:setPixel(cx - y, cy - x, px)
     end
   end
 end
 
-local function drawCircle(xcenter, ycenter, radius, color, fill)
+local function drawCircle(xcenter, ycenter, radius, color, fill, s)
   local x, y = 0, radius
   local p = (5 - radius*4)/4
   
-  circlePoints(xcenter, ycenter, x, y, color, fill)
+  circlePoints(xcenter, ycenter, x, y, color, fill, s)
   while x < y do
     x = x + 1
     if p < 0 then
@@ -68,12 +76,12 @@ local function drawCircle(xcenter, ycenter, radius, color, fill)
       y = y - 1
       p = p + 2*(x-y)+1
     end
-    circlePoints(xcenter, ycenter, x, y, color, fill)
+    circlePoints(xcenter, ycenter, x, y, color, fill, s)
   end
 end
 
-function lib.circle(c)
-  drawCircle(c.x + c.r, c.y + c.r, c.r, c.color, c.fill)
+function lib.circle(c, s)
+  drawCircle(c.x + c.r, c.y + c.r, c.r, c.color, c.fill, s or ts)
 end
 
 local fonts = {}
@@ -105,7 +113,8 @@ end
 lib.load_font("8x16", 8, 16)
 lib.load_font("5x5", 5, 5)
 
-function lib.glyph(x, y, char, color, font)
+function lib.glyph(x, y, char, color, font, s)
+  s = s or ts
   local data = fonts[font][char]
   if not data then
     error("bad glyph " .. char)
@@ -113,39 +122,40 @@ function lib.glyph(x, y, char, color, font)
   for i, byte in ipairs(data) do
     for N = 7, 0, -1 do
       if bit32.band(byte, 2^N) ~= 0 then
-        term.setPixel(x + (7-N), y + i - 1, color)
+        s:setPixel(x + (7-N), y + i - 1, color)
       end
     end
   end
 end
 
-function lib.text(t, r)
-  local w, h = term.getSize(2)
+function lib.text(t, r, s)
+  s = s or ts
+  local w, h = s:getSize(2)
   local x, y = t.x, t.y
   local font = t.font or "8x16"
   local fdat = fonts[font]
   for c in t.text:gmatch(".") do
-    lib.glyph(x, y, c, t.color or 0, font)
+    lib.glyph(x, y, c, t.color or 0, font, s)
     x = x + fdat.width
     if x + fdat.width > w then
       x = t.wrapTo or 0
       y = y + fdat.height
       if y + fdat.height > h then
-        pixman.yscroll(fdat.height, r)
+        pixman.yscroll(fdat.height, r, s)
         y = y - fdat.height
       end
     end
   end
 end
 
-function lib.rounded_rect(r)
+function lib.rounded_rect(r, s)
   local radius = r.radius or RC_RADIUS
   local r1 = {x = r.x + radius, y = r.y, w = r.w - radius * 2, h = r.h,
     color = r.color}
   local r2 = {x = r.x, y = r.y + radius, w = r.w, h = r.h - radius * 2,
     color = r.color}
-  lib.rect(r1)
-  lib.rect(r2)
+  lib.rect(r1, s)
+  lib.rect(r2, s)
   local points = {
     {r.x, r.y},
     {r.x, r.y + r.h - (radius * 2) - 1},
@@ -154,7 +164,7 @@ function lib.rounded_rect(r)
   }
   for i=1, #points, 1 do
     lib.circle({x = points[i][1], y = points[i][2], r = radius,
-      color = r.color, fill = true})
+      color = r.color, fill = true}, s)
   end
 end
 
