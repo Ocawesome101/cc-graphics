@@ -22,10 +22,11 @@ primitives.circle({
 })
 
 primitives.text({x=1, y=1, text="this is some text"})
+primitives.text({x=10, y=100, text="!\"#$&'(", font = "5x5"})
 
 local wst = ""
 for i=32, 126, 1 do wst = wst .. string.char(i) end
-primitives.text({x=1, y=14, text=wst})
+primitives.text({x=1, y=14, text=wst, font="5x5"})
 
 primitives.rounded_rect({
   x = 100, y = 100,

@@ -76,28 +76,37 @@ function lib.circle(c)
   drawCircle(c.x + c.r, c.y + c.r, c.r, c.color, c.fill)
 end
 
-local font = {}
+local fonts = {}
 
 -- NEW HEXFONT LOADER
 
-local function reverse_bits()
+function lib.load_font(as, cw, ch)
+  local file = "/gfx/fonts/"..as..".hex"
+  local font = {}
+  font.width = cw
+  font.height = ch
+  for line in io.lines(file) do
+    local ch, dat = line:match("(%x+):(%x+)")
+    if ch and dat then
+      ch = tonumber("0x"..ch)
+      if ch > 255 then
+        break
+      end
+      ch = string.char(ch)
+      font[ch] = {}
+      for bp in dat:gmatch("%x%x") do
+        font[ch][#font[ch]+1] = tonumber("0x"..bp)
+      end
+    end
+  end
+  fonts[as] = font
 end
 
-for line in io.lines("gfx/font.hex") do
-  local ch, dat = line:match("(%x+):(%x+)")
-  ch = tonumber("0x"..ch)
-  if ch > 255 then
-    break
-  end
-  ch = string.char(ch)
-  font[ch] = {}
-  for bp in dat:gmatch("%x%x") do
-    font[ch][#font[ch]+1] = tonumber("0x"..bp)
-  end
-end
+lib.load_font("8x16", 8, 16)
+lib.load_font("5x5", 5, 5)
 
-function lib.glyph(x, y, char, color)
-  local data = font[char]
+function lib.glyph(x, y, char, color, font)
+  local data = fonts[font][char]
   if not data then
     error("bad glyph " .. char)
   end
@@ -113,15 +122,17 @@ end
 function lib.text(t, r)
   local w, h = term.getSize(2)
   local x, y = t.x, t.y
+  local font = t.font or "8x16"
+  local fdat = fonts[font]
   for c in t.text:gmatch(".") do
-    lib.glyph(x, y, c, t.color or 0)
-    x = x + 8
-    if x + 8 > w then
+    lib.glyph(x, y, c, t.color or 0, font)
+    x = x + fdat.width
+    if x + fdat.width > w then
       x = t.wrapTo or 0
-      y = y + 16
-      if y + 16 > h then
-        pixman.yscroll(16, r)
-        y = y - 16
+      y = y + fdat.height
+      if y + fdat.height > h then
+        pixman.yscroll(fdat.height, r)
+        y = y - fdat.height
       end
     end
   end

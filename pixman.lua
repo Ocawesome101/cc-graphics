@@ -1,20 +1,4 @@
-local function insertIntoTable(t, n, i)
-  local ogn = #t
-  for j=ogn, n, -1 do
-    t[j+1] = t[j]
-  end
-  t[n] = i
-end
-
-local function removeFromTable(t, n)
-  local ogn = #t
-  t[n] = nil
-  for i=n+1, ogn, 1 do
-    t[i-1] = t[i]
-  end
-  if n < ogn then t[#t] = nil end
-end
-
+local t = require("table-lib")
 local lib = {}
 
 function lib.yscroll(n, r)
@@ -27,12 +11,12 @@ function lib.yscroll(n, r)
   local pixels = term.getPixels(r.x, r.y, r.w, r.h, true)
   if n > 0 then
     for i=1, n, 1 do
-      removeFromTable(pixels, 1)
+      t.removeFromTable(pixels, 1)
       pixels[#pixels+1] = string.char(r.color or 15):rep(r.w)
     end
   elseif n < 0 then
     for i=1, math.abs(n), 1 do
-      insertIntoTable(pixels, 1, string.char(r.color or 15):rep(r.w))
+      t.insertIntoTable(pixels, 1, string.char(r.color or 15):rep(r.w))
       pixels[#pixels] = nil
     end
   end
