@@ -78,30 +78,23 @@ end
 
 local font = {}
 
--- font.txt is expected to contain a monospace 8x16 font
--- see the example one for the exact format
-local handle = io.open("gfx/font.txt", "r")
-local n, c = 0, ""
-for line in handle:lines("l") do
-  if n == 0 or n == 17 then
-    font[line] = {}
-    n = 1
-    c = line
-  else
-    local byte = 0
-    local N = 0
-    for c in line:gmatch(".") do
-      if c == "#" then
-        byte = bit32.bor(byte, (2^N))
-      end
-      N = N + 1
-    end
-    n = n + 1
-    table.insert(font[c], byte)
-  end
+-- NEW HEXFONT LOADER
+
+local function reverse_bits()
 end
 
-handle:close()
+for line in io.lines("gfx/font.hex") do
+  local ch, dat = line:match("(%x+):(%x+)")
+  ch = tonumber("0x"..ch)
+  if ch > 255 then
+    break
+  end
+  ch = string.char(ch)
+  font[ch] = {}
+  for bp in dat:gmatch("%x%x") do
+    font[ch][#font[ch]+1] = tonumber("0x"..bp)
+  end
+end
 
 function lib.glyph(x, y, char, color)
   local data = font[char]
@@ -109,9 +102,9 @@ function lib.glyph(x, y, char, color)
     error("bad glyph " .. char)
   end
   for i, byte in ipairs(data) do
-    for N = 0, 7, 1 do
+    for N = 7, 0, -1 do
       if bit32.band(byte, 2^N) ~= 0 then
-        term.setPixel(x + N, y + i - 1, color)
+        term.setPixel(x + (7-N), y + i - 1, color)
       end
     end
   end
