@@ -17,7 +17,7 @@ local palette = {
   0xff0000,
   0x00ff00,
   0xffff00,
-  0x0000ff,
+  0x66b6ff,
   0xff00ff,
   0x00ffff,
   0xffffff
@@ -35,20 +35,22 @@ primitives.rect {
 
 local ui = require("ui")
 
-for i=1, 10, 1 do
-  local win = ui.Window:new {
-    title = "TEST WINDOW " .. i,
-    x = 10 * i,
-    y = 10 * i
-  }
-  
-  ui.addWindow(win)
-end
+local win = ui.Window:new {
+  title = "TEST WINDOW",
+  x = 10,
+  y = 10
+}
+
+win:addChild(ui.Switch:new {
+  x = 10,
+  y = 10
+})
+
+ui.addWindow(win)
 
 while true do
   if not ui.refresh() then break end
 end
-
 
 term.setGraphicsMode(false)
 

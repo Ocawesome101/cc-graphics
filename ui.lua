@@ -1,7 +1,7 @@
 -- user-interface library --
 
 local primitives = require("primitives")
-local expect = require("cc.expect")
+local expect = require("cc.expect").expect
 local t = require("table-lib")
 
 local _base = {}
@@ -58,6 +58,12 @@ function _base:key_up(k)
   if self.focus then self.children[self.focus]:key_up(k) end
 end
 
+function _base:addChild(c)
+  expect(1, c, "table")
+  self.children[#self.children+1] = c
+  return #self.children
+end
+
 function _base:redraw(x, y)
   for i=1, #self.children, 1 do
     self.children[i]:redraw(x + self.x, y + self.y)
@@ -80,7 +86,7 @@ function ui.Window:__init(params)
   self.title = params.title or "NEW WINDOW"
 end
 
-function ui.Window:redraw()
+function ui.Window:redraw(x, y)
   primitives.rect {
     x = self.x + 1, y = self.y + 1, w = self.w, h = self.h, color = 0,
   }
@@ -97,7 +103,7 @@ function ui.Window:redraw()
       r = 2, x = self.x + self.w - 7, y = self.y + 2, color = 9, fill = true
     }
   end
-  _base.redraw(self)
+  _base.redraw(self, x, y)
 end
 
 function ui.Window:click_up(x, y, b)
@@ -115,7 +121,7 @@ function ui.Window:click(x, y, b)
     xos, yos = x, y
     self.isdrag = true
   else
-    _base.click(self)
+    _base.click(self, x, y, b)
   end
 end
 
@@ -187,6 +193,17 @@ end
 
 ui.View = _base:new()
 
+ui.Label = _base:new()
+
+function ui.Label:__init(params)
+  expect(1, params, "table")
+  self.x = params.x or 1
+  self.y = params.y or 1
+  self.text = params.text or ""
+  self.color = params.color or 0
+  self.font = params.font or "5x5"
+end
+
 ui.Button = _base:new()
 
 function ui.Button:__init(params)
@@ -195,13 +212,19 @@ function ui.Button:__init(params)
   self.y = params.y or 1
   self.w = params.w or 20
   self.h = params.h or 10
-  self.r = params.radius or 4
+  self.r = params.radius or 2
   -- 0 rect
   -- 1 circle
   -- 2 rounded rect
   self.type = params.type or 2
   self.text = params.text
   self.surface = params.surface
+end
+
+function ui.Button:click()
+  if self.onClick then
+    self:onClick()
+  end
 end
 
 function ui.Button:redraw(x, y)
@@ -232,6 +255,41 @@ function ui.Button:redraw(x, y)
   end
 end
 
+ui.Switch = ui.Button:new({})
+
+function ui.Switch:__init(params)
+  expect(1, params, "table")
+  params.w = 10
+  params.h = 5
+  self.state = not not params.state
+  ui.Button.__init(self, params)
+end
+
+function ui.Switch:click()
+  self.state = not self.state
+  if self.onClick then
+    self:onClick(self.state)
+  end
+end
+
+function ui.Switch:redraw(x, y)
+  primitives.rect({
+    x = x + self.x + 2,
+    y = y + self.y, w = self.w - 4, h = self.h,
+    color = self.state and 12 or 8
+  }, self.surface)
+  primitives.circle({
+    x = x + self.x, y = y + self.y,
+    color = (not self.state) and 15 or 12,
+    r = 2, fill = true
+  })
+  primitives.circle({
+    x = x + self.x + self.w - 4, y = y + self.y,
+    color = self.state and 15 or 8,
+    r = 2, fill = true
+  })
+end
+
 function ui.addWindow(win)
   expect(1, window, "table")
   if windows[1] then windows[1].focused = false end
@@ -250,13 +308,14 @@ function ui.refresh()
       if windows[i].delete then
         del[#del+1] = i
       end
-      windows[i]:redraw()
+      windows[i]:redraw(0, 0)
     end
   end
   term.setFrozen(false)
   for i=#del, 1, -1 do
     t.removeFromTable(windows, del[i])
   end
+  if not windows[1] then sig = {} end
   if sig[1] == "mouse_click" then
     local x, y = sig[3], sig[4]
     for i=1, #windows, 1 do
